@@ -37,16 +37,14 @@ class Writer
         $this->buffer[$day][] = $data;
         
         if (count($this->buffer[$day]) > $this->maxBufferLength) {
-            echo 'saving '.$this->getBufferLength()."\n";
             $this->save();
-            echo 'saved '.$this->getBufferLength()."\n";
         }
 
         if (!$this->registered) {
             $this->registered = true;
             $obj = $this->me();
             register_shutdown_function(function() use ($obj) {
-                $this->save();
+                $obj->save();
             });
         }
     }

@@ -29,15 +29,6 @@ class Reader
         return $this;
     }
     
-    public function getAvailableDays()
-    {
-        $years = array_filter(array_map('intval', scandir($this->path)));
-        $days = [];
-        foreach ($years as $year) {
-            $days = array_merge($days, array_filter(array_map('intval', scandir($this->path.'/'.$year))));
-        }
-        return $days;
-    }
     
     public function pointer()
     {
@@ -82,9 +73,29 @@ class Reader
         $this->resource = null;
     }
     
-    public function hasNextDay()
+    protected function getAvailableDays()
+    {
+        $years = array_filter(array_map('intval', scandir($this->path)));
+        $days = [];
+        foreach ($years as $year) {
+            $days = array_merge($days, array_filter(array_map('intval', scandir($this->path.'/'.$year))));
+        }
+        return $days;
+    }
+    
+    protected function hasNextDay()
+    {
+        return !empty($this->getNextDay());
+    }
+    
+    protected function getNextDay()
     {
         $days = $this->getAvailableDays();
+        $current = $this->day;
+        $days = array_filter(array_map(function ($a) use ($current) {
+                return $a > $current ? $a : 0;
+            }, $days));
+        return count($days) ? min($days) : '';
     }
     
     protected function nextDay()
@@ -98,9 +109,7 @@ class Reader
     
     protected function setNextDay()
     {
-        $date = \DateTime::createFromFormat('Ymd', $this->day);
-        $date->add(new DateInterval('P1D'));
-        $this->day = $date->format('Ymd');
+        $this->day = $this->getNextDay();
         $this->pos = 0;
     }
 

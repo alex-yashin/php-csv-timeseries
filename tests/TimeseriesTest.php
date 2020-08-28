@@ -26,14 +26,21 @@ class TimeseriesTest extends TestCase
 
     public function testRead()
     {
+        @mkdir(__DIR__ . '/data/2019', 0777, true);
+        @mkdir(__DIR__ . '/data/2020', 0777, true);
+        file_put_contents(__DIR__ . '/data/2019/20191231.csv', '');
+        file_put_contents(__DIR__ . '/data/2020/20200102.csv', '');
+        file_put_contents(__DIR__ . '/data/2020/20200103.csv', '');
+        
         $reader = new \CSVTimeseries\Reader;
         $reader->from(__DIR__ . '/data/');
-//        print_r($reader);
         $line = $reader->next();
         $reader->close();
         $ts = array_shift($line);
+        
+        $i = 1;
         $this->assertEquals('test', $line[0]);
-        $this->assertEquals(1, $line[1]);
+        $this->assertEquals($i++, $line[1]);
 
         $expectedPointer = date('Ymd') . ':' . '40';
 
@@ -44,9 +51,16 @@ class TimeseriesTest extends TestCase
         $line = $reader->next();
         $ts = array_shift($line);
         $this->assertEquals('test', $line[0]);
-        $this->assertEquals(2, $line[1]);
+        $this->assertEquals($i++, $line[1]);
         $expectedPointer = date('Ymd') . ':' . '80';
         $this->assertEquals($expectedPointer, $reader->pointer());
+        
+        while ($line = $reader->next()) {
+            $ts = array_shift($line);
+            $this->assertEquals('test', $line[0]);
+            $this->assertEquals($i++, $line[1]);
+            $this->assertEquals('simple', $line[2]);
+        }
     }
 
 }
