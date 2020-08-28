@@ -6,9 +6,11 @@
     $writer->to(__DIR__ . '/data/');
     $i = 1;
     while ($i < 1000) {
+        //it adds current timestamp to the record and saves the record to a buffer
         $writer->add(['test', $i++]);
     }
-    //it adds current timestamp for each record and creates single file per day, for example: "data/2020/20200931.csv"
+    //it writers the buffer to a disk and creates single file per day, 
+    //for example: "data/2020/20200931.csv"
     //save call is optional. script shutdown triggers it.
     $writer->save();
 
