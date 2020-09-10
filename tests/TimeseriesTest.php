@@ -43,7 +43,7 @@ class TimeseriesTest extends TestCase
         $this->assertEquals($i++, $line[1]);
 
         $expectedPointer = date('Ymd') . ':' . '40';
-
+        
         $this->assertEquals($expectedPointer, $reader->pointer());
 
         $reader = new \CSVTimeseries\Reader;

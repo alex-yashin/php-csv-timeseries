@@ -19,7 +19,7 @@ class Reader
     public function from($path, $pointer = '')
     {
         $this->path = $path;
-        if (!empty($pointer)) {
+        if (!empty($pointer) && preg_match("/\d+\:\d+/s", $pointer)) {
             list($this->day, $this->pos) = explode(':', $pointer);
         } else {
             $days = $this->getAvailableDays();
@@ -32,6 +32,9 @@ class Reader
     
     public function pointer()
     {
+        if (empty($this->day)) {
+            return '';
+        }
         return \implode(':', [$this->day, $this->pos]);
     }
 
