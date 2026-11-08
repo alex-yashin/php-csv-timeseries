@@ -61,7 +61,7 @@ class Writer
             $r = fopen($filePath, 'a');
             flock($r, LOCK_EX);
             foreach ($buffer as $line) {
-                fputcsv($r, $line);
+                fputcsv($r, $line, ",", '"', "\\");
             }
             flock($r, LOCK_UN);
             fclose($r);
