@@ -5,6 +5,8 @@ namespace CSVTimeseries;
 class Reader
 {
 
+    const FILE_EXTENSION = '.csv';
+
     protected $resource = null;
     protected $path = '';
     protected $day = '';
@@ -61,9 +63,14 @@ class Reader
         if (empty($this->day)) {
             return null;
         }
-        $path = rtrim($this->path, '/') . '/' . substr($this->day, 0, 4);
-        $filePath = $path . '/' . $this->day . '.csv';
-        $this->resource = fopen($filePath, 'r');
+        if (!$this->skipMissingDays()) {
+            return null;
+        }
+        $resource = fopen($this->getFilePath($this->day), 'r');
+        if ($resource === false) {
+            return null;
+        }
+        $this->resource = $resource;
         if (!empty($this->pos)) {
             fseek($this->resource, $this->pos);
         }
@@ -72,23 +79,63 @@ class Reader
     
     public function close()
     {
-        fclose($this->resource);
+        if (!is_null($this->resource)) {
+            fclose($this->resource);
+        }
         $this->resource = null;
+    }
+
+    /**
+     * Если файла текущего дня нет, переключается на ближайший следующий доступный день.
+     * Возвращает false, если доступных файлов не осталось (указатель при этом не меняется,
+     * чтобы можно было дочитать файл, когда он появится).
+     */
+    protected function skipMissingDays()
+    {
+        while (!is_file($this->getFilePath($this->day))) {
+            $nextDay = $this->getNextDay();
+            if (empty($nextDay)) {
+                return false;
+            }
+            $this->day = $nextDay;
+            $this->pos = 0;
+        }
+        return true;
+    }
+
+    protected function getFilePath($day)
+    {
+        return rtrim($this->path, '/') . '/' . substr($day, 0, 4) . '/' . $day . self::FILE_EXTENSION;
     }
     
     protected function getAvailableDays()
     {
-        $years = array_filter(array_map('intval', scandir($this->path)));
         $days = [];
-        foreach ($years as $year) {
-            $days = array_merge($days, array_filter(array_map('intval', scandir($this->path.'/'.$year))));
+        foreach ($this->scanNumericEntries($this->path) as $year) {
+            $days = array_merge($days, $this->scanNumericEntries(rtrim($this->path, '/') . '/' . $year));
         }
         return $days;
+    }
+
+    /**
+     * Числовые имена записей каталога (годы или дни); пустой массив, если каталога нет.
+     */
+    protected function scanNumericEntries($dir)
+    {
+        if (!is_dir($dir)) {
+            return [];
+        }
+        $entries = scandir($dir);
+        if ($entries === false) {
+            return [];
+        }
+        return array_values(array_filter(array_map('intval', $entries)));
     }
     
     protected function hasNextDay()
     {
-        return !empty($this->getNextDay());
+        $nextDay = $this->getNextDay();
+        return !empty($nextDay);
     }
     
     protected function getNextDay()

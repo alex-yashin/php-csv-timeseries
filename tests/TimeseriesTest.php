@@ -1,10 +1,29 @@
 <?php
 
 use PHPUnit\Framework\TestCase;
-use Pina\Input;
 
 class TimeseriesTest extends TestCase
 {
+
+    /** Временный каталог данных для изолированных тестов */
+    protected $tmpDir = null;
+
+    protected function tearDown()
+    {
+        if (!is_null($this->tmpDir)) {
+            $this->removeDir($this->tmpDir);
+            $this->tmpDir = null;
+        }
+    }
+
+    protected function removeDir($dir)
+    {
+        foreach (array_diff(scandir($dir), ['.', '..']) as $entry) {
+            $path = $dir . '/' . $entry;
+            is_dir($path) ? $this->removeDir($path) : unlink($path);
+        }
+        rmdir($dir);
+    }
 
     public function testWrite()
     {
@@ -61,6 +80,32 @@ class TimeseriesTest extends TestCase
             $this->assertEquals($i++, $line[1]);
             $this->assertEquals('simple', $line[2]);
         }
+    }
+
+    public function testReadSkipsMissingDay()
+    {
+        $this->tmpDir = sys_get_temp_dir() . '/csv-timeseries-' . uniqid();
+        $existingDay = '20210105';
+        $missingDay = '20210103';
+        $dayAfterAll = '20210110';
+        mkdir($this->tmpDir . '/2021', 0777, true);
+        $file = $this->tmpDir . '/2021/' . $existingDay . '.csv';
+        file_put_contents($file, "ts1,first\nts2,second\n");
+
+        // Файла дня из указателя нет: читатель переходит к следующему доступному дню с начала файла
+        $reader = new \CSVTimeseries\Reader;
+        $reader->from($this->tmpDir, $missingDay . ':10');
+        $this->assertEquals(['ts1', 'first'], $reader->next());
+        $this->assertEquals(['ts2', 'second'], $reader->next());
+        $this->assertEquals($existingDay . ':' . filesize($file), $reader->pointer());
+        $reader->close();
+
+        // Следующих дней нет: без ошибки возвращается пустой результат, указатель не меняется
+        $reader = new \CSVTimeseries\Reader;
+        $reader->from($this->tmpDir, $dayAfterAll . ':0');
+        $this->assertEmpty($reader->next());
+        $this->assertEquals($dayAfterAll . ':0', $reader->pointer());
+        $reader->close();
     }
 
 }
